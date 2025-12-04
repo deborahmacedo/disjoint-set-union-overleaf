@@ -1,8 +1,190 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 
-% --- �� Conteúdo do arquivo myrefs.bib (21 Referências Completas) ---
-% Este bloco DEVE vir antes de qualquer \usepackage para ser criado corretamente.
+% --- Pacotes Essenciais ---
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[utf8]{inputenc} % Codificação para acentos e caracteres especiais
+\usepackage[portuguese]{babel} % Idioma em português
+\usepackage{url} % Para URLs nas referências
+\usepackage{float} % Para controle de figuras (embora as imagens serão ignoradas, o pacote é útil para pseudocódigos)
+\usepackage{caption} % Para a numeração de pseudocódigos
+\usepackage{subcaption} % Para subfiguras
+
+% --- Definição das Macros (simulando as figuras e pseudocódigos no texto original) ---
+\newcommand{\pseudocodofindnaive}{
+\begin{verbatim}
+function find(x)
+if parent [x] == x
+  return x
+else
+  return find (parent [x])
+\end{verbatim}
+}
+
+\newcommand{\pseudocodofindnaiveinlined}{
+\begin{verbatim}
+int find_set(int v) {
+  if (v == parent[v])
+    return v;
+  return find_set(parent [v]);
+}
+\end{verbatim}
+}
+
+\newcommand{\pseudocodofindoptimized}{
+\begin{verbatim}
+int find_set(int v) {
+  if (v == parent[v])
+    return v;
+  return parent[v] = find_set(parent[v]);
+}
+\end{verbatim}
+}
+
+\newcommand{\pseudocodoScanLine}{
+\begin{verbatim}
+(1) tratamento especial da primeira linha
+(2) para i := 2 a l fazer começar
+(3)   tratamento especial do primeiro pixel da linha i
+(4)   para j := 2 a w fazer começar
+(5)     esquerda <- FindCompress(bm[bi, j-ld]);
+(6)     para cima <- FindCompress(bm[bi-1, y]);
+(7)     this <- FindCompress(bm[bi, jd]);
+(8)     se Oracle(esquerda, isto) então isto <- União(esquerda, isto);
+(9)     se Oracle(ponta, isto) então União(ponta, isto),
+(10)  fim
+(11)  Aplanar(linha i)
+(12) fim
+\end{verbatim}
+}
+
+\newcommand{\pseudocodoMergeSquares}{
+\begin{verbatim}
+Entrada: Um número inteiro k e um bitmap bm de tamanho 2^k x 2^k
+(1) se k=0, então retorne 
+(2) li := 2^(k-1) - 1; a += 2^k;
+(3) para DIR <- NW para SE faça MergeSquares(bm[DBA], k-1);
+(4) para i := 0 a 2^k faça começar
+(5)   esquerda: Encontrar(bm[bi, j]), direita: Encontrar(bm[i, h+j]);
+(6)   se Oracle(esquerda, direita) então União(esquerda, direita),
+(7) fim
+(8) para i := 0 a 2^k fazer começar
+(9)   up: Encontrar(bm[b/i*, 1])); down: Encontrar(km[/i", id);
+(10)  se Oracle(cima, baixo) então União(cima, baixo);
+(11) fim
+\end{verbatim}
+}
+
+\newcommand{\kernelINITIALIZATION}{
+\begin{verbatim}
+1: kernel INITIALIZATION (L, step_L)
+2: r <- (threadIdx.y + blockIdx.y x blockDim.y) x 2
+3: c <- (threadIdx.x + blockIdx.x x blockDim.x) x 2
+4: x_L <- r x step_L + c
+5: L[x_L] <- x_L
+\end{verbatim}
+}
+
+\newcommand{\kernelMERGE}{
+\begin{verbatim}
+6: kernel MERGE(I, step_I, L, step_L)
+7: r <- (threadIdx.y + blockIdx.y x blockDim.y) x 2
+8: c <- (threadIdx.x + blockIdx.x x blockDim.x) x 2
+9: x_I <- r x step_I + c
+10: x_L <- r x step_L + c
+11: BS <- 0
+12: if I[x_I] = 1 then BS |= 0x777
+13: if I[x_I + 1] = 1 then BS |= (0x777 << 1)
+14: if I[x_I + step_I] = 1 then BS |= (0x777 << 4)
+15: if BS > 0 then
+16:   if HasBit(BS, 0) and I[x_I - step_I - 1] then
+17:     Union(L, x_L, x_L - 2 x step_L - 2)
+18:   if (HasBit(BS, 1) and I[x_I - step_I]) or
+19:      (HasBit (BS, 2) and I[x_I - step_I + 1]) then
+20:     Union(L, x_L, x_L - 2 x step_L)
+21:   if HasBit (BS, 3) and I[x_I - step_I + 2] then
+22:     Union(L, x_L, x_L - 2 x step_L + 2)
+23:   if (HasBit(BS, 4) and I[x_I - 1]) or
+24:      (HasBit(BS, 8) and I[x_I + step_I - 1]) then
+25:     Union (L, x_L, x_L - 2)
+\end{verbatim}
+}
+
+\newcommand{\kernelCOMPRESSION}{
+\begin{verbatim}
+26: kernel COMPRESSION(L, step_L)
+27: r <- (threadIdx.y + blockIdx.y x blockDim.y) x 2
+28: c <- (threadIdx.x + blockIdx.x x blockDim.x) x 2
+29: x_L <- r x step_L + c
+30: Compress (L, x_L)
+\end{verbatim}
+}
+
+\newcommand{\kernelFINALDELABELLING}{
+\begin{verbatim}
+31: kernel FINALLABELING(I, step_I, L, step_L)
+32: r <- (threadIdx.y + blockIdx.y x blockDim.y) x 2
+33: c <- (threadIdx.x + blockIdx.x x blockDim.x) x 2
+34: x_I <- r x step_I + c
+35: x_L <- r x step_L + c
+36: label <- L[x_L] + 1
+37: L[x_L] <- label x I[x_I]
+38: L[x_L + 1] <- label x I[x_I + 1]
+39: L[x_L + step_L] <- label x I[x_I + step_I]
+40: L[x_L + step_L + 1] <- label x I[x_I + step_I + 1]
+\end{verbatim}
+}
+
+\newcommand{\pseudocodoKruskal}{
+\begin{verbatim}
+1: A = 0
+2: for each vertex v in G.V
+3:   MAKE-SET(v)
+4: sort the edges of G.E into
+   nondecreasing order by weight w
+5: for each edge (u, v) in G.E, taken in
+   nondecreasing order by weight
+6:   If FIND-SET(u) != FIND-SET(v)
+7:     A = A U {(u, v)}
+8:     UNION(u, v)
+9: return A
+\end{verbatim}
+}
+
+\newcommand{\pseudocodoNeuroKruskal}{
+\begin{verbatim}
+function NEUROSEQKRUSKAL(graph)
+edgesSorted <- NeuroSort(graph.edges)
+  |> or NeuroRadixSort
+mstEdges <- []
+for (w, u, v) in edgesSorted do
+  |> batch submit
+  if NeuroUnionFind([ (w, u, v) ]) then
+    return mstEdges
+  end if
+end for
+end function
+\end{verbatim}
+}
+
+\newcommand{\pseudocodoGK}{
+\begin{verbatim}
+Require: Initial graph H=(V,E'), E' in E(G), array of edges R in particular order
+1: for each edge e in R do
+2:   if E(H) U {e} is acyclic then
+3:     E(H) <- E(H) U {e}
+4:     if H is spanning tree then
+5:       return H
+\end{verbatim}
+}
+
+% --- Conteúdo do arquivo myrefs.bib (23 Referências Completas) ---
+% Este bloco DEVE vir antes de \maketitle para a formatação correta.
 \usepackage{filecontents}
 \begin{filecontents*}{myrefs.bib}
 @article{chargueraud2019verifying,
@@ -78,7 +260,7 @@ year={2024}
 author = {{Professor Ferretto}},
 title = {Diferença e complementar},
 howpublished = {Blog do Ferretto},
-note = {Disponível em: \url{https://blog.professorferretto.com.br/diferenca-e-complementar/}. [Acesso em: 01 dez. 2025]}
+note = {Disponível em: \url{https://blog.professorferretto.com.br/diferenca-e-complementar}. [Acesso em: 01 dez. 2025]}
 }
 
 @misc{sambaiz_article390,
@@ -184,53 +366,45 @@ pages={61-65},
 month={maio},
 doi={10.29121/ijetmr.v12.i5.2025.1616}
 }
+
+@misc{clarivate_wos,
+author={Clarivate},
+title={Web of Science Platform},
+note={Disponível em: \url{https://clarivate.com/academia-government/scientific-and-academic-research/research-discovery-and-referencing/web-of-science/}. Acesso em: 04 dez. 2025}
+}
+
+@misc{elsevier_scopus,
+author={Elsevier},
+title={Scopus},
+note={Disponível em: \url{https://www.elsevier.com/products/scopus}. Acesso em: 04 dez. 2025}
+}
 \end{filecontents*}
 
-% --- Pacotes Essenciais ---
-\usepackage{cite}
-\usepackage{amsmath,amssymb,amsfonts}
-\usepackage{algorithmic}
-\usepackage{graphicx}
-\usepackage{textcomp}
-\usepackage{xcolor}
-
-% --- Pacotes Customizados/Opcionais (Melhor organização) ---
-\usepackage{caption}
-\usepackage{subcaption}
-\usepackage{float} % Para melhor controle de posicionamento de figuras
-
-% --- Configurações Customizadas ---
-\captionsetup[figure]{labelsep=period} % Define o separador do label da figura para ponto (como Fig. 1.)
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
-
-% =========================================================================
-% Bloco de Autores (SIMULANDO LAYOUT CENTRALIZADO DO PDF)
-% =========================================================================
+% --- Bloco de Autores (SIMULANDO LAYOUT DE TRÊS COLUNAS NA PÁGINA 1) ---
 \author{
-    \parbox{\linewidth}{\centering
-        1\textsuperscript{st} Déborah Macedo \\
-        \textit{Instituto Metrópole Digital} \\
-        \textit{Universidade Federal do Rio Grande do Norte} \\
-        Natal, Brasil \\
-        deborahkmacedo@gmail.com
-    }
-    \and
-    \parbox{\linewidth}{\centering
-        2\textsuperscript{nd} Júlia Lima dos Santos \\
-        \textit{Instituto Metrópole Digital} \\
-        \textit{Universidade Federal do Rio Grande do Norte} \\
-        Natal, Brasil \\
-        liaju1909@gmail.com
-    }
-    \and
-    \parbox{\linewidth}{\centering
-        3\textsuperscript{rd} Rayssa Cavalcante \\
-        \textit{Instituto Metrópole Digital} \\
-        \textit{Universidade Federal do Rio Grande do Norte} \\
-        Natal, Brasil \\
-        Rayssa.beatriz1205@gmail.com
-    }
+    \parbox{\linewidth}{\centering
+        1\textsuperscript{st} Déborah Macedo \\
+        \textit{Instituto Metrópole Digital (of Aff.)} \\
+        \textit{Universidade Federal do Rio Grande do Norte (of Aff.)} \\
+        Natal, Brasil \\
+        deborahkmacedo@gmail.com
+    }
+    \and
+    \parbox{\linewidth}{\centering
+        2\textsuperscript{nd} Júlia Lima dos Santos \\
+        \textit{Instituto Metrópole Digital (of Aff.)} \\
+        \textit{Universidade Federal do Rio Grande do Norte (of Aff.)} \\
+        Natal, Brasil \\
+        liaju1909@gmail.com
+    }
+    \and
+    \parbox{\linewidth}{\centering
+        3\textsuperscript{rd} Rayssa Cavalcante \\
+        \textit{Instituto Metrópole Digital (of Aff.)} \\
+        \textit{Universidade Federal do Rio Grande do Norte (of Aff.)} \\
+        Natal, Brasil \\
+        Rayssa.beatriz1205@gmail.com
+    }
 }
 
 
@@ -238,794 +412,216 @@ doi={10.29121/ijetmr.v12.i5.2025.1616}
 
 \title{Conjuntos Disjuntos}
 
-\maketitle 
+\maketitle 
 
-% --- INÍCIO DO ABSTRACT (POSIÇÃO CORRETA APÓS \maketitle) ---
+% --- ABSTRACT E KEYWORDS EM PORTUGUÊS ---
 \begin{abstract}
-Este artigo apresenta uma análise detalhada da estrutura de dados \textbf{Union-Find} (também conhecida como \textbf{Disjoint Set Union - DSU}) e sua relevância fundamental na Ciência da Computação moderna. A DSU é essencial para o gerenciamento eficiente de coleções de conjuntos disjuntos, permitindo a manutenção dinâmica de partições de um universo de elementos. O trabalho explora as \textbf{operações primárias} (MakeSet, Find e Union) e, crucialmente, as \textbf{otimizações} que garantem sua performance em larga escala, destacando a \textbf{Compressão de Caminho (Path Compression)} e a \textbf{União por Rank/Tamanho (Union by Rank/Size)}, que reduzem a complexidade amortizada para quase constante, $O(\alpha(n))$. Adicionalmente, são examinadas aplicações práticas e avançadas da DSU, incluindo seu papel na \textbf{Teoria dos Grafos} (especificamente no Algoritmo de Kruskal para Árvores Geradoras Mínimas) e em algoritmos de \textbf{Processamento de Imagens} (como Rotulagem de Componentes Conectados e Union-Find distribuído em ambientes paralelos, como GPUs). O objetivo é demonstrar como a eficiência assintótica da DSU a torna indispensável para o tratamento de problemas de conectividade e particionamento em sistemas com grande volume de dados.
+\textbf{Resumo}- A estrutura de dados Conjuntos Disjuntos (Disjoint Set Union DSU), também conhecida como Union-Find, é uma ferramenta algorítmica fundamental na Ciência da Computação para gerenciar e manipular partições dinâmicas de elementos, garantindo que a intersecção entre quaisquer dois conjuntos seja nula. O DSU se destaca pela eficiência operacional, centrada nas operações Find, que identifica o representante canônico de um conjunto, e Union, que combina dois conjuntos. Para alcançar um desempenho em larga escala, o DSU emprega otimizações cruciais, como o Union by Rank/Size e a Path Compression (compressão de caminho). A combinação dessas heurísticas resulta em uma complexidade de tempo amortizada notavelmente baixa, onde $\alpha$ é a função inversa de Ackermann, garantindo sua escalabilidade em cenários com milhões de dados e em ambientes paralelos.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Conjuntos Disjuntos, DSU, Union-Find, Algoritmos
+Conjuntos Disjuntos (DSU), Union-Find, Estrutura de Dados, Partições Dinâmicas, Operação Find (Busca), Operação Union (União), Representante Canônico, União por Rank/Tamanho, Compressão de Caminho, Complexidade de Tempo Amortizada, Função Inversa de Ackermann, Escalabilidade.
 \end{IEEEkeywords}
-% --- FIM DO ABSTRACT ---
 
-\section{Introdução}
+% --- ABSTRACT E KEYWORDS EM INGLÊS ---
+\begin{abstract}
+\textbf{Abstract}- The Disjoint Set Union (DSU) data structure, also known as Union-Find, is a fundamental algorithmic tool in Computer Science for managing and manipulating dynamic partitions of elements, ensuring that the intersection between any two sets is null. DSU stands out due to its operational efficiency, centered on the Find operation, which identifies the canonical representative of a set, and the Union operation, which combines two sets. To achieve large-scale performance, DSU employs crucial optimizations such as Union by Rank/Size and Path Compression. The combination of these heuristics results in a remarkably low amortized time complexity, where $\alpha$ is the inverse Ackermann function, guaranteeing its scalability in scenarios involving millions of data points and in parallel environments.
+\end{abstract}
 
-Os Conjuntos Disjuntos são coleções que não
-compartilham elementos, ou seja, sua interseção é nula. Também
-chamados na Ciência da Computação de Union-Find ou Disjoint
-Set Union (DSU). A estrutura de dados DSU, também referida como Union-Find, é definida fundamentalmente
-como uma ferramenta algorítmica para gerir uma coleção de
-conjuntos dinâmicos e não sobrepostos.
+\begin{IEEEkeywords}
+Disjoint Set Union (DSU), Union-Find, Data Structure, Dynamic Partitions, Find Operation, Union Operation, Canonical Representative, Union by Rank/Size, Path Compression, Amortized Time Complexity, Inverse Ackermann Function, Scalability.
+\end{IEEEkeywords}
 
-Segundo Patwary, Blair e Manne \cite{patwary2010experiments}, o seu propósito
-central é manter uma partição de um universo finito, permitindo a
-execução eficiente de operações que modificam a estrutura dos
-conjuntos ou consultam a pertença dos elementos. Em contextos
-mais recentes e complexos, como o processamento paralelo, a
-definição estende-se para garantir a consistência de dados em
-ambientes de memória compartilhada, onde múltiplos processos
-podem aceder à estrutura simultaneamente \cite{jayanti2021concurrent}.
+\section{INTRODUÇÃO}
 
-São conceitos semelhantes e intimamente relacionados.
-O Union Find é a estrutura de dados que resolve as operações do
-Disjoint Set. Esses conceitos estão profundamente conectados:
-enquanto os Conjuntos Disjuntos definem o problema de
-particionamento, o Disjoint Set Union (DSU) é a estrutura de
-dados que proporciona a solução para esse problema.
+Os **Conjuntos Disjuntos** são coleções que não compartilham elementos, ou seja, sua interseção é nula. Também chamados na Ciência da Computação de **Union-Find** ou **Disjoint Set Union (DSU)**. A estrutura de dados DSU, também referida como Union-Find, é definida fundamentalmente como uma ferramenta algorítmica para gerir uma coleção de conjuntos dinâmicos e não sobrepostos.
 
-A DSU se destaca pela eficiência das suas operações
-principais, leva também o nome de Union-Find devido as suas
-principais operações: a União dos conjuntos e a Busca de
-pertencimento de um elemento \cite{chargueraud2019verifying}.
+Segundo Patwary, Blair e Manne \cite{patwary2010experiments}, o seu propósito central é manter uma partição de um universo finito, permitindo a execução eficiente de operações que modificam a estrutura dos conjuntos ou consultam a pertença dos elementos. Em contextos mais recentes e complexos, como o processamento paralelo, a definição estende-se para garantir a consistência de dados em ambientes de memória compartilhada, onde múltiplos processos podem aceder à estrutura simultaneamente \cite{jayanti2021concurrent}. São conceitos semelhantes e intimamente relacionados. O Union Find é a estrutura de dados que resolve as operações do Disjoint Set.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{conjdisjuntos.png} % MANTIDO
-    \caption{Exemplo de Conjuntos Disjuntos \cite{alstrup2005union}} % [5]
-    \label{fig:exemplo_dsu}
-\end{figure}
+Esses conceitos estão profundamente conectados: enquanto os Conjuntos Disjuntos definem o problema de particionamento, o DSU é a estrutura de dados que proporciona a solução para esse problema.
 
-Atualmente, há um grande fluxo de dados e
-informações, e isso cresce a cada ano, uma aplicação que vêm
-do uso de DSU é o paralelismo e a grande escalabilidade
-deles, como no caso de estudo que Chen et al. propuseram um
-algoritmo Union Find distribuído, o HIDE, que alcança alta
-eficiência em grafos de larga escala \cite{chen2025hierarchical}. % [3]
+A DSU se destaca pela eficiência das suas operações principais, leva também o nome de Union-Find devido as suas principais operações: a União dos conjuntos e a Busca de pertencimento de um elemento \cite{shen2023study}.
 
-\section{Conjuntos Disjuntos e Partições}
+Atualmente, há um grande fluxo de dados e informações, e isso cresce a cada ano, uma aplicação que vêm do uso de DSU é o paralelismo e a grande escalabilidade deles, como no caso de estudo que Chen et al. propuseram um algoritmo Union Find distribuído, o HIDE, que alcança alta eficiência em grafos de larga escala \cite{chen2025hierarchical}.
 
-A teoria dos conjuntos disjuntos fundamenta problemas
-que exigem a separação de elementos em subconjuntos
-mutuamente exclusivos, constituindo uma partição do conjunto
-universo. Conforme observam Shen, Li e Shi \cite{shen2023study}, % [2]
-o algoritmo
-Union-Find foi originalmente proposto "para gerenciar relações
-entre classes de equivalência", indicando que sua motivação
-primária reside na representação de grupos que, por definição,
-não se sobrepõem. Matematicamente, o DSU (Disjoint Set
-Union) opera sobre um conjunto universo $U$ de $n$ elementos
-distintos, mantendo uma partição dinâmica $\mathcal{S}=\{S_1, S_2, \dots, S_k\}$ \cite{shen2023study}. % [2]
-A propriedade central deste domínio é a disjunção,
-onde "dois conjuntos $S_1$ e $S_2$ são disjuntos se a interseção
-entre eles for o conjunto vazio" \cite{patwary2010experiments}. % [6]
+---
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.95\columnwidth]{union find.jpeg} % MANTIDO
-    \caption{A árvore Union-Find \cite{sambaiz_article390}} % [10]
-    \label{fig:arvore_dsu}
-\end{figure}
+\section{CONJUNTOS DISJUNTOS E PARTIÇÕES}
 
-Sob a ótica da estrutura de dados, a validade desta
-coleção como partição é assegurada pelo uso de identificadores
-canônicos. Patwary, Blair e Manne \cite{patwary2010experiments} % [6] 
-explicam que cada
-subconjunto é identificado por um "representante único",
-garantindo que não haja ambiguidade sobre o pertencimento de
-um elemento. Para sustentar essa lógica, a representação interna
-geralmente adota uma abordagem de floresta de árvores
-enraizadas. Nesta topologia, cada conjunto corresponde a uma
-árvore onde "cada nó contém um ponteiro para o seu pai e a raiz
-da árvore aponta para si mesma" \cite{patwary2010experiments}, % [6] 
-atuando a raiz como o identificador do conjunto.
+A teoria dos conjuntos disjuntos fundamenta problemas que exigem a separação de elementos em subconjuntos mutuamente exclusivos, constituindo uma partição do conjunto universo. O algoritmo Union-Find foi originalmente proposto "para gerenciar relações entre classes de equivalência", indicando que sua motivação primária reside na representação de grupos que, por definição, não se sobrepõem. Matematicamente, o DSU opera sobre um conjunto universo com elementos distintos, mantendo uma partição dinâmica. A propriedade central deste domínio é a disjunção, onde dois conjuntos são disjuntos se a interseção entre eles for o conjunto vazio \cite{patwary2010experiments}.
 
-O DSU utiliza, internamente, uma estrutura formada por
-árvores. Cada conjunto disjunto é representado por uma árvore
-cujo nó raiz funciona como representante do conjunto. Os
-elementos representativos "são organizados em uma estrutura de
-árvore... o conjunto ao qual qualquer elemento pertence pode ser
-determinado rapidamente" \cite{shen2023study}. % [2]
-Tal
-estrutura permite economia de espaço e rapidez nas consultas,
-uma vez que cada nó armazena apenas uma referência para seu
-pai.
+Sob a ótica da estrutura de dados, a validade desta coleção como partição é assegurada pelo uso de **identificadores canônicos**. Patwary, Blair e Manne \cite{patwary2010experiments} explicam que cada subconjunto é identificado por um "representante único", garantindo que não haja ambiguidade sobre o pertencimento de um elemento. Para sustentar essa lógica, a representação interna geralmente adota uma abordagem de **floresta de árvores enraizadas**. Nesta topologia, cada conjunto corresponde a uma árvore onde "cada nó contém um ponteiro para o seu pai e a raiz da árvore aponta para si mesma" \cite{patwary2010experiments}, atuando a raiz como o identificador do conjunto.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig 3.jpeg} % MANTIDO
-    \caption{Representação em árvore \cite{algocoding_unionfind}} % [11]
-    \label{fig:arvore_representacao}
-\end{figure}
+O DSU utiliza, internamente, uma estrutura formada por árvores. Cada conjunto disjunto é representado por uma árvore cujo nó raiz funciona como representante do conjunto. Os elementos representativos "são organizados em uma estrutura de árvore... o conjunto ao qual qualquer elemento pertence pode ser determinado rapidamente" \cite{shen2023study}. Tal estrutura permite economia de espaço e rapidez nas consultas, uma vez que cada nó armazena apenas uma referência para seu pai.
 
-Ademais, temos que "cada elemento recebe um
-identificador único... Esses conjuntos podem ser fundidos
-dinamicamente" \cite{shen2023study}, % [2] 
-reforçando que os
-conjuntos são maleáveis e podem se adaptar conforme surgem
-novas relações.
+Ademais, temos que "cada elemento recebe um identificador único... Esses conjuntos podem ser fundidos dinamicamente" \cite{shen2023study}, reforçando que os conjuntos são maleáveis e podem se adaptar conforme surgem novas relações.
 
-A dinâmica da partição evolui através de operações que
-alteram a topologia dos conjuntos sem violar a propriedade de
-disjunção. O ciclo de vida da estrutura é descrito por Patwary,
-Blair e Manne \cite{patwary2010experiments} % [6] 
-através de três operações fundamentais:
-\begin{enumerate}
-    \item Criação ($MAKE SET(x)$): O estado inicial assume
-    que cada elemento $x$ começa em seu próprio conjunto
-    unitário (singleton), onde o próprio $x$ é o
-    representante.
-    \item Consulta ($FIND(x)$): O algoritmo navega na estrutura
-    hierárquica para retornar o representante do conjunto
-    que contém $x$, permitindo a verificação de
-    equivalência entre elementos.
-\end{enumerate}
-
-\begin{verbatim}
-function find(x)
-if parent [x] == x
-  return x
-else
-  return find (parent [x])
-\end{verbatim}
+A dinâmica da partição evolui através de operações que alteram a topologia dos conjuntos sem violar a propriedade de disjunção. O ciclo de vida da estrutura é descrito através de três operações fundamentais \cite{patwary2010experiments}:
 
 \begin{enumerate}
-\setcounter{enumi}{2} % Continua a numeração do ambiente anterior
-    \item Fusão ($UNION(x,y)$): A operação funde os conjuntos
-    disjuntos que contém $x$ e $y$ em uma nova entidade
-    única $S_x \cup S_y$, reduzindo a cardinalidade total
-    da coleção $\mathcal{S}$.
+    \item **Criação (\texttt{MAKE\_SET(x)}):** O estado inicial assume que cada elemento $x$ começa em seu próprio conjunto unitário (singleton), onde o próprio $x$ é o representante.
+    \item **Consulta (\texttt{FIND(x)}):** O algoritmo navega na estrutura hierárquica para retornar o representante do conjunto que contém $x$, permitindo a verificação de equivalência entre elementos.
+\item **Fusão (\texttt{UNION(x,y)}):** A operação funde os conjuntos disjuntos que contém $x$ e $y$ em uma nova entidade única, reduzindo a cardinalidade total da coleção $S$.
 \end{enumerate}
-\begin{verbatim}
-function find(x)
-if parent [x] == x
-  return x
-else
-  return find (parent [x])
-\end{verbatim}
-É importante notar que essa evolução segue regras
-estritas de monotonicidade. Jayanti e Tarjan \cite{jayanti2021concurrent} % [7] 
-destacam uma
-invariante essencial para a correção de algoritmos, especialmente
-em contextos paralelos: a partição evolui através da fusão; um
-conjunto nunca é dividido. Assim, em qualquer instante $t$, a
-estrutura deve refletir uma partição válida, impondo restrições
-significativas sobre o acesso e modificação de memória
-concorrente.
-
-\section{Operações Fundamentais}
-
-Há três operações fundamentais no DSU: a criação de um
-conjunto com apenas um elemento, a união dos conjuntos e a
-busca por um elemento pertencente aos conjuntos. Cada uma
-feita de uma forma diferente, mas direta e rápida. Dado as
-características de uso do DSU, ele precisa ser um algoritmo
-rápido, uma vez que é escalável e pode ter milhões de dados.
-
-\subsection{Makeset}
-
-É a criação de um conjunto com apenas um elemento, o
-singleton, a inicialização do conjunto. Cada elemento
-começa como um conjunto separado de um único nó que
-também é a sua raiz \cite{goel2019disjoint}, % [4] 
-pois pode garantir a formação
-correta e manipulação dos conjuntos disjuntos.
-
-\subsection{Union}
-
-A União dos Conjuntos, recebe os elementos dos
-conjuntos e os une em um único conjunto, essa é a função
-principal da união. Além disso, por ser uma estrutura de
-dados e serem representados na forma de árvores, vai haver
-uma reorganização para uma única árvore que representará
-a união dos conjuntos.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\columnwidth]{fig5.jpeg} % MANTIDO
-    \caption{Representação da união do DSU \cite{cp-algorithms}} % [18]
-    \label{fig:uniao_dsu}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\columnwidth]{fig6.jpeg} % MANTIDO
-    \caption{Continuação da representação da união do DSU \cite{cp-algorithms}} % [18]
-    \label{fig:uniao_dsu2}
-\end{figure}
-
-A União da DSU também possui variações a fim de
-otimizar essa operação, o ligamento por rank e por tamanho,
-essa técnica reduz as alturas das árvores tornando as operações
-seguintes mais eficientes.
-\begin{itemize}
-    \item \textbf{Union by rank}: Cada conjunto tem um valor "rank",
-    geralmente se refere a altura da árvore, e aquele de
-    menor rank é unido ao de maior. Caso o rank seja igual
-    um se tornar filho do outro, e o novo rank é
-    incrementado, a fim de não se diferenciar.
-    \item \textbf{Union by size}: ao invés de utilizar o rank como
-    tamanho, a árvore quer ter mais nó, resolvendo
-    empates de forma arbitrária.
-\end{itemize}
-Para cada um desses métodos será necessário o
-armazenamento de alguns dados como as alturas das
-árvores e dos nós delas \cite{chen2025hierarchical}. % [3]
-
-\subsection{Find}
-
-A operação $Find(x)$ irá procurar a qual árvore o elemento
-pertence, será fundamental para identificar a qual conjunto
-ele pertence e assim realizar as demais operações de forma
-mais eficiente.
-
-Essa operação irá seguir o ponteiro do nó pai até
-encontrar um que aponta para si mesmo, o qual é o
-representante do conjunto.
-
-Tal operação também é a base da union, já que para a
-união ser feita é necessário encontrar as raízes dos conjuntos a
-serem unidos antes da conexão.
-
-\begin{figure}[H]
-    \centering
-    % Subfigura 6A: Ingênua
-    \begin{subfigure}[b]{0.7\columnwidth}
-        \centering
-        \includegraphics[width=0.7\textwidth]{naiveimp.jpeg} % MANTIDO
-        \caption{Função Find implementada de forma ingênua}
-        \label{fig:find_ingenuo}
-    \end{subfigure}
-    % Quebra de linha automática (sem \hfill)
-    \begin{subfigure}[b]{0.7\columnwidth}
-        \centering
-        \includegraphics[width=0.7\textwidth]{notnaive.jpeg} % MANTIDO
-        \caption{Função Find implementada de forma otimizada}
-        \label{fig:find_otimizado}
-    \end{subfigure}
-    \caption{Implementação da função Find (Fontes: CP-Algorithms)} % Ajustado para remover a repetição de CP-Algorithms
-\end{figure}
-
-Na definição do Find vemos que cada elemento
-aponta para o nó pai, e que para encontrar a raiz do conjunto é
-necessário achar o nó que aponta para si mesmo. O processo
-anteriormente citado configura-se como a busca ingênua. Essa
-operação essencial tem complexidade $O(n)$, o que não é o
-ideal, por isso a operação Find também
-possui algumas formas de otimização \cite{chen2025hierarchical}: % [3]
-\begin{itemize}
-    \item \textbf{Path Compression}: cada nó pai aponta diretamente
-    para a raiz da árvore, assim é muito mais fácil de achar
-    a raiz dela.
-    \item \textbf{Splitting}: funciona como uma escada que ao invés de
-    subir degrau por degrau, você consegue ir de dois em
-    dois, já que cada nó irá apontar para o nó avô ao invés
-    de apontar para o nó pai.
-    \item \textbf{Halving}: ele encontra o nó e aponta o avô em nós
-    alternados (um sim, um não).
-\end{itemize}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig8.jpeg} % MANTIDO
-    \caption{Técnica path compression em conjuntos disjuntos. À esquerda, os elementos estão organizados em diferentes conjuntos, enquanto à direita, a árvore foi reestruturada após a aplicação de compressão de caminhos, otimizando a estrutura ao tornar as buscas mais eficientes. \cite{cp-algorithms}} % [18]
-    \label{fig:path_compression_exemplo}
-\end{figure}
-
-\section{Otimização do DSU: Compressão de Caminho}
-
-A compressão de caminho é a principal otimização
-utilizada no DSU para acelerar operações repetidas. A técnica
-consiste em "conectar nós diretamente ao seu nó raiz, reduzindo a
-altura da árvore ao mínimo" \cite{shen2023study}. % [2] 
-Os
-autores Zijie Shen, Ruixiang Li, Junping Shi \cite{shen2023study} % [2] 
-enfatizam o impacto
-da técnica ao afirmar que ela "pode reduzir significativamente a
-complexidade de tempo das operações de busca subsequentes".
-
-Com essa otimização, o DSU atinge desempenho
-amortizado praticamente constante, mesmo em cenários com um
-grande número de operações. Para evitar que as árvores cresçam
-demais, é realizado o uso de duas otimizações.
-
-\subsection{Union by size}
-
-Union by size (UBS) sempre anexa a menor árvore à maior.
-Essa técnica "limita a altura das árvores a $O(\log N)"$ e reduz o
-custo do find \cite{griffiths2024union}. % [8] 
-Esta
-estratégia mantém o número de nós (tamanho) de cada subárvore
-na raiz.
-
-Ao unir dois conjuntos, a raiz da árvore menor é sempre
-ligada à raiz da árvore maior. Dessa forma, isso garante que a
-altura da árvore resultante cresça o mais lentamente possível. Um
-elemento só aumenta a sua profundidade se a sua árvore for
-ligada a uma maior, o que acontece no máximo $O(\log N)$
-vezes. Para a implementação, requer um array auxiliar para
-armazenar os tamanhos. Inicialmente, cada conjunto tem o
-tamanho 1.
-
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{1.0\columnwidth}
-        \centering
-        \includegraphics[width=\textwidth]{fig9.jpeg} % MANTIDO
-        \caption{Configuração inicial da variação Union by size \cite{takeuforward_dsu}} % [12]
-        \label{fig:ubs_inicial}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{1.0\columnwidth}
-        \centering
-        \includegraphics[width=\textwidth]{fig10.jpeg} % MANTIDO
-        \caption{Configuração final da variação Union by size \cite{takeuforward_dsu}} % [12]
-        \label{fig:ubs_final}
-    \end{subfigure}
-    \caption{Implementação do Union by Size}
-\end{figure}
-
-\subsection{Path compression}
-
-Path compression comprime o caminho de busca
-tornando cada nó visitado filho direto da raiz. O uso conjunto
-das otimizações produz "complexidade amortizada $O(\alpha(n))$
-[...] efetivamente constante" \cite{griffiths2024union}. % [8]
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig11.jpeg} % MANTIDO
-    \caption{Após a compressão de caminho, todos os nós passam a apontar diretamente para a raiz, reduzindo a altura da árvore para 1}
-    \label{fig:path_compression_exemplo_2}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig12.jpeg} % MANTIDO
-    \caption{Após a aplicação de Path Compression, todos os nós passam a apontar diretamente para a raiz, produzindo uma estrutura completamente achatada \cite{algocoding_unionfind}} % [11]
-    \label{fig:full_compression_achatada}
-\end{figure}
-
-\textbf{Compressão de Caminho Completa (Full Path
-Compression)} é a técnica padrão onde, após encontrar a raiz
-de um elemento $x$, todos os nós visitados no caminho de
-$x$ até a raiz são atualizados para apontar diretamente para a
-raiz. Isso reduz drasticamente a profundidade da árvore para
-operações futuras.
-
-\subsection{Path Splitting}
-
-Patwary, Blair e Manne \cite{patwary2010experiments} % [6] 
-discutem variantes que
-podem ser mais eficientes em termos de ciclos de CPU e
-acesso à memória, pois evitam uma segunda passagem pelos
-nós. Em vez de atualizar
-todos os nós para a raiz final, cada nó no caminho de busca é
-atualizado para apontar para o seu avô (o pai do seu pai). Isso
-encurta o caminho gradualmente sem a necessidade de
-conhecer a raiz antecipadamente.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\columnwidth]{fig13.jpeg} % MANTIDO
-    \caption{A técnica de 'splitting' ajusta cada nó para apontar para o pai de seu pai durante a busca, promovendo um achatamento gradual da árvore}
-    \label{fig:path_splitting}
-\end{figure}
-
-\subsection{Path Halving}
-
-Outra variação citada por Patwary, Blair e Manne \cite{patwary2010experiments} % [6] 
-é a Path Halving. Semelhante à separação, mas a atualização do
-ponteiro para o avô é feita em nós alternados (um nó sim, um nó
-não) ao longo do caminho, reduzindo pela metade a quantidade
-de gravações na memória.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.6\columnwidth]{fig 14.jpeg} % MANTIDO
-    \caption{A técnica de 'halving' faz cada nó apontar para seu avô, reduzindo a altura pela metade a cada operação de busca}
-    \label{fig:path_halving}
-\end{figure}
-
-\subsection{Union by rank}
-
-Union by Rank é uma variação onde, em vez do
-tamanho exato, armazena-se um limite superior para a altura da
-árvore, chamado de "posto" (rank).
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig15.jpeg} % MANTIDO
-    \caption{Árvores separadas cujas raízes possuem tamanhos diferentes; cada conjunto mantém sua própria estrutura interna \cite{algocoding_unionfind}} % [11]
-    \label{fig:union_rank_inicial}
-\end{figure}
-
-Se duas árvores de postos diferentes são unidas, a de
-menor posto é ligada à de maior posto, e o posto resultante não
-muda. Se duas árvores do mesmo posto são unidas, uma é ligada
-à outra e o posto da nova raiz é incrementado em 1. Sua
-vantagem é que ocupa menos memória (o posto
-nunca excede $\log N$), embora a
-complexidade assintótica seja idêntica à união por tamanho.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig16.jpeg} % MANTIDO
-    \caption{A união é realizada anexando a árvore menor à raiz da árvore maior, preservando uma altura reduzida e garantindo melhor desempenho nas operações futuras \cite{algocoding_unionfind}} % [11]
-    \label{fig:union_rank_final}
-\end{figure}
-
-Essas otimizações são consideradas essenciais para
-garantir o desempenho teórico ótimo da estrutura.
-
-\section{Processamento de Imagens}
-
-Segundo Dubey et al.\cite{dubey2025advancements} % [21] 
-a área de processamento de
-imagens é essencial para aplicações computacionais em diversos
-campos, incluindo física, medição e simulação 3D. As
-capacidades da tecnologia de imagem digital foram ampliadas
-significativamente pelas técnicas de processamento de imagens e
-pelas melhorias no hardware de computadores.
-
-Um dos maiores problemas da área de visão
-computacional é extrair as características principais de uma
-imagem. A estrutura Union-Find é ideal para este problema
-porque ele lida com o gerenciamento de coleções disjuntas de
-elementos (os pixels) que são agrupados (mesclados) ao longo do
-tempo. Nesse sentido, o union-find é utilizado para auxiliar no
-processo de divisão de imagens em regiões significativas ou
-homogêneas para o processo de descrição da cena.
-
-Fiorio e Gusted \cite{fiorio1996linear} % [19] 
-também sugeriram um outro
-algoritmo de expansão de crescimento de regiões que chamaram
-de MergeSquares (Ver Figura \ref{fig:mergesquares_esquema}). Para esse algoritmo, foi assumido
-que a imagem é um quadrado de $\sqrt{n} \times \sqrt{n}$, com
-$\sqrt{n}$ sendo uma potência de 2,
-e
-procede-se
-recursivamente, dividindo-o em 4 sub-quadrados de tamanho
-$\sqrt{n}/2 \times \sqrt{n}/2$. Depois de retornar da recursão,
-as regiões nos 4 sub-quadrados são fundidas ao longo da fronteira
-comum.
-
-% --- INÍCIO DA FIGURA 17 (Não-Flutuante) ---
-\vspace{-0.5cm} % Reduz o espaço vertical ANTES da figura 17
-\begin{center}
-    \includegraphics[width=1.0\columnwidth]{fig19.jpeg} % MANTIDO
-    \captionof{figure}{Esquema do algoritmo MergeSquares}
-    \label{fig:mergesquares_esquema}
-\end{center}
-\vspace{-0.5cm} % Reduz o espaço vertical DEPOIS da figura 17
-
-% --- INÍCIO DA FIGURA 18 (Não-Flutuante) ---
-\begin{center}
-    \includegraphics[width=1.0\columnwidth]{fig20.jpeg} % MANTIDO
-    \captionof{figure}{Pseudocódigo do algoritmo MergeSquares}
-    \label{fig:mergesquares_pseudocod}
-\end{center}
-
-A implementação começa com cada região sendo
-composta por um único pixel. O algoritmo processa inicialmente
-a primeira linha de pixels e, subsequentemente, itera linha a linha,
-referenciando a linha anterior (vide Figura \ref{fig:scanline_esquema}). Em cada linha, o
-sistema inspeciona cada pixel individualmente para determinar se
-ele pode ser integrado às regiões formadas pelos pixels
-adjacentes, especificamente, o pixel à esquerda e o pixel acima.
-Na linha inicial, naturalmente, a fusão é considerada apenas com
-o pixel adjacente à esquerda. Após a conclusão do processamento
-de uma linha, uma verificação final é realizada, e a função Flatten
-é acionada para simplificar a estrutura do conjunto de pixels
-daquela linha. Visando assegurar a complexidade temporal geral
-do algoritmo, a operação de União prioriza ligar a região mais
-recentemente encontrada na linha àquela que foi identificada
-primeiro. Um simples contador, que é incrementado a cada nova
-região detectada, facilita esse controle. Dado que o processo de
-União é realizado conectando uma região à raiz da outra (uma
-característica da estrutura Disjoint Set Union), podemos assumir
-que esta operação ocorre em tempo constante ($O(1)$).
-
-Fiorio e Gusted \cite{fiorio1996linear} % [19] 
-também sugeriram um outro
-algoritmo de expansão de crescimento de regiões que chamaram
-de MergeSquares (Ver Figura \ref{fig:mergesquares_esquema}). Para esse algoritmo, foi assumido
-que a imagem é um quadrado de $\sqrt{n} \times \sqrt{n}$, com
-$\sqrt{n}$ sendo uma potência de 2,
-e
-procede-se
-recursivamente, dividindo-o em 4 sub-quadrados de tamanho
-$\sqrt{n}/2 \times \sqrt{n}/2$. Depois de retornar da recursão,
-as regiões nos 4 sub-quadrados são fundidas ao longo da fronteira
-comum.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig19.jpeg} % MANTIDO
-    \caption{Esquema do algoritmo MergeSquares}
-    \label{fig:mergesquares_esquema}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig20.jpeg} % MANTIDO
-    \caption{Pseudocódigo do algoritmo MergeSquares}
-    \label{fig:mergesquares_pseudocod}
-\end{figure}
-
-Os algoritmos mostrados nas Figuras \ref{fig:scanline_pseudocod} e \ref{fig:mergesquares_pseudocod}, têm como
-foco a complexidade dos algoritmos de Union-find no contexto
-de visão computacional, mas também existem algoritmos que têm como enfoque um outro problema encontrado ao realizar esse
-tipo de operação: o acesso à memória. Por isso Allegretti, Bolelli
-e Grana \cite{allegretti2020optimized} % [20] 
-sugeriram uma nova solução que chamaram de
-"Block-based Union Find kernels" (Ver Figura \ref{fig:buf_initialization}-\ref{fig:buf_final}).
-
-\begin{figure}[H]
-    \centering
-    % Primeira parte: Kernel INITIALIZATION e MERGE
-    \includegraphics[width=1.0\columnwidth]{fig21.jpeg} 
-    \caption{Kernel INITIALIZATION e MERGE do BUF}
-    \label{fig:buf_initialization}
-    
-    \vspace{-0.5cm} % Reduzindo o espaço entre a primeira legenda e a segunda imagem
-
-    % Segunda parte: Kernel COMPRESSION
-    \includegraphics[width=1.0\columnwidth]{fig22.jpeg}
-    \caption{Kernel COMPRESSION do BUF}
-    \label{fig:buf_compression}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1.0\columnwidth]{fig23.jpeg} % MANTIDO
-    \caption{Kernel FINAL LABELING do BUF}
-    \label{fig:buf_final}
-\end{figure}
-
-O algoritmo apresentado na Figura \ref{fig:buf_initialization} detalha os kernels
-essenciais que compõem o método Block-based Union Find
-(BUF), desenvolvido para a Rotulagem de Componentes
-Conectados (CCL) em GPUs. Este algoritmo é uma adaptação
-otimizada da estrutura Union Find (UF), na qual o processamento
-é aplicado a blocos $2\times2$ em vez de pixels individuais, o que visa
-reduzir drasticamente a quantidade de acessos à memória e,
-consequentemente, melhorar o desempenho geral. O BUF herda a
-estrutura básica do Union Find e é implementado através de
-quatro kernels executados sequencialmente: INITIALIZATION,
-MERGE, COMPRESSION e FINAL LABELING.
-
-\section{Teoria dos Grafos}
-
-Na Teoria dos Grafos, o Union-Find funciona como um
-organizador eficiente de grupos. É ele que garante a velocidade
-de algoritmos clássicos, sendo usado principalmente para
-descobrir se um caminho fecha um ciclo ou para construir a
-Árvore Geradora Mínima com o algoritmo de Kruskal. Formalmente, um conjunto
-disjunto representa um grupo de nós num grafo que estão
-interligados entre si, mas não possuem conexão com nós de
-outros grupos.
-
-\section{Algoritmo de Kruskal}
-
-O algoritmo de Kruskal, proposto por Joseph Kruskal
-em 1956, representa uma abordagem fundamental e elegante para
-a resolução do problema da Árvore Geradora Mínima (MST, do
-inglês Minimum Spanning Tree). Sendo um algoritmo guloso
-(greedy), ele constrói uma MST para um grafo conectado e
-ponderado, selecionando iterativamente as arestas de menor peso
-que não formam ciclos com as arestas já selecionadas \cite{patwary2010experiments}. % [6] 
-A
-eficiência e a simplicidade conceitual deste método dependem
-intrinsecamente da estrutura de dados conjuntos disjuntos. Como
-essa estrutura de dados é projetada para gerenciar uma partição
-de um conjunto de elementos em uma coleção de subconjuntos
-disjuntos, ela se torna crucial para a detecção de ciclos em tempo
-quase constante, o que torna o algoritmo de Kruskal
-particularmente eficaz, especialmente para grafos esparsos \cite{patwary2010experiments}. % [6]
-
-A operação do algoritmo de Kruskal pode ser resumida
-em duas fases principais: primeiro, todas as arestas do grafo são
-ordenadas em ordem não decrescente de seus pesos. Em seguida,
-as arestas são percorridas nessa ordem, e cada aresta é adicionada
-à MST se, e somente se, seus vértices de extremidade
-pertencerem a componentes conectadas diferentes. A estrutura de
-dados de conjuntos disjuntos viabiliza essa verificação de forma
-extremamente eficiente através de duas operações primárias:
-
-FIND-SET, que determina o representante (ou a identidade do
-conjunto) de um elemento, e UNION, que une dois conjuntos
-disjuntos em um único conjunto. Um pseudocódigo clássico que
-ilustra essa dinâmica é apresentado no Algoritmo \ref{alg:kruskal}, trazido de
-sua aplicação na geração de labirintos \cite{ihsan2021non}. % [14]
-
-\begin{figure}[H]
-    \centering
-    \begin{minipage}{0.48\textwidth}
-        \begin{algorithmic}[1]
-        \State $A=\emptyset$
-        \For{each vertex $v \in G.V$}
-            \State MAKE-SET($v$)
-        \EndFor
-        \State sort the edges of $G.E$ into nondecreasing order by weight $w$
-        \For{each edge $(u,v) \in G.E$, taken in nondecreasing order by weight}
-            \If {FIND-SET($u$) $\neq$ FIND-SET($v$)}
-                \State $A = A \cup \{(u,v)\}$
-                \State $UNION(u,v)$
-            \EndIf
-        \EndFor
-        \State \Return $A$
-        \caption{Kruskal Algorithm}
-        \label{alg:kruskal}
-        \end{algorithmic}
-    \end{minipage}
-    \caption{Pseudocódigo do Algoritmo de Kruskal \cite{ihsan2021non}} % [14]
-\end{figure}
-
-A complexidade do algoritmo de Kruskal é dominada
-pelo tempo necessário para ordenar as arestas, que é $O(|E| \log
-|E|)$, onde $|E|$ é o número de arestas. As operações subsequentes
-com a estrutura de dados de conjuntos disjuntos, utilizando
-otimizações como união por ranking e compressão de caminho,
-têm uma complexidade amortizada quase constante, resultando
-em um tempo total de $O(|E|\log|V|)$ para a verificação de ciclos,
-onde $|V|$ é o número de vértices. Assim, a complexidade geral do
-algoritmo é tipicamente $O(|E| \log |E|)$ ou $O(|E| \log |V|)$ \cite{chargueraud2019verifying}. % [1]
-
-A robustez e eficiência do algoritmo de Kruskal,
-sustentadas pela estrutura de conjuntos disjuntos, abriram
-caminho para sua aplicação em uma vasta gama de domínios.
-
-\subsection{Computação Neuromórfica e Paralela}
-
-Com o advento de novas arquiteturas de computação, o
-algoritmo de Kruskal foi adaptado para explorar o paralelismo
-massivo e a computação orientada a eventos dos sistemas
-neuromórficos. Uma abordagem inovadora propõe uma versão
-em pipeline do algoritmo, que desacopla as duas etapas
-principais, ordenação e union-find, permitindo sua execução
-concorrente. Este algoritmo, conforme detalhado em Chong et
-al. \cite{chong2024pipelining}, % [15] 
-demonstra ganhos de desempenho significativos em
-comparação com métodos baseados no algoritmo de Prim para
-grafos de grande escala. O pseudocódigo a seguir (Algoritmo \ref{alg:neurokruskal})
-ilustra a versão sequencial neuromórfica, que serve de base para a
-implementação em pipeline.
-
-\begin{figure}[H]
-    \centering
-    \begin{minipage}{0.48\textwidth}
-        \begin{algorithmic}[1]
-        \Function{NeuroSeqKruskal}{graph}
-        \State edgesSorted $\leftarrow$ NeuroSort(graph.edges) \Comment{or NeuroRadixSort}
-        \State mstEdges $\leftarrow$ [ ]
-        \For{$(w, u, v) \in$ edgesSorted}
-            \State \Comment{batch submit}
-            \If{NeuroUnionFind([($w, u, v)$])}
-                \State \Return mstEdges
-            \EndIf
-        \EndFor
-        \EndFunction
-        \caption{NeuroSeqKruskal Algorithm (Adaptado de [15])}
-        \label{alg:neurokruskal}
-        \end{algorithmic}
-    \end{minipage}
-\end{figure}
-
-Além disso, no campo da computação paralela, o
-algoritmo de Kruskal é um componente central em algoritmos
-rápidos para a construção de Árvores Geradoras Mínimas
-Euclidianas (EMST) e para o clustering espacial hierárquico,
-como o HDBSCAN*. Nesses contextos, ele é frequentemente
-combinado com técnicas como a Decomposição em Pares
-Bem-Separados (Well-Separated Pair Decomposition - WSPD)
-para otimizar a construção da MST em espaços de alta
-dimensão \cite{wang2021fast}. % [16]
-
-\subsection{Geração Procedural de Labirintos}
-
-Uma aplicação criativa e visualmente intuitiva do
-algoritmo de Kruskal é a geração de labirintos. Um labirinto pode
-ser modelado como um grafo de grade, onde as células são
-vértices e as paredes são arestas. Um labirinto "perfeito", que
-possui um único caminho entre quaisquer duas células, é
-topologicamente equivalente a uma árvore geradora desse grafo
-de grade. O algoritmo de Kruskal pode ser usado para gerar um
-labirinto perfeito tratando cada célula como um conjunto disjunto
-e adicionando aleatoriamente "passagens" (arestas) que conectam
-células em conjuntos diferentes, garantindo que nenhum ciclo
-seja formado \cite{ihsan2021non}. % [14]
-
-Modificações nesse processo permitem a criação de
-labirintos "não-perfeitos", que contêm ciclos. Isso é alcançado
-simplesmente continuando a adicionar arestas ao grafo mesmo
-depois que uma árvore geradora já foi formada. A adição de $k$
-arestas extras a uma MST resultará em um grafo com exatamente
-$k$ ciclos fundamentais, permitindo um controle preciso sobre a
-"abertura" ou a quantidade de caminhos alternativos no
-labirinto \cite{ihsan2021non}. % [14]
-
-\subsection{Otimização Evolutiva (Generalised-Kruskal)}
-
-No campo da computação evolutiva, o mecanismo de
-construção de árvores do algoritmo de Kruskal foi generalizado
-para criar operadores de mutação sob medida para o problema da
-MST multi-objetivo (moMST). Bossek e Grimm \cite{bossek2024generalised} % [17] 
-introduziram
-um framework chamado Generalised-Kruskal (GK), que abstrai
-os componentes essenciais do algoritmo original. O GK
-(Algoritmo \ref{alg:generalised_kruskal}) opera sobre uma floresta inicial e uma lista
-pré-ordenada de arestas relevantes, construindo uma árvore
-geradora sem fazer uso interno dos pesos das arestas.
-
-\begin{figure}[H]
-    \centering
-    \begin{minipage}{0.48\textwidth}
-        \begin{algorithmic}[1]
-        \Require Initial graph $H=(V,E')$, $E' \subseteq E(G)$, array of edges $R$ in particular order
-        \For{each edge $e \in R$}
-            \If {$E(H) \cup \{e\}$ is acyclic}
-                \State $E(H) \leftarrow E(H) \cup \{e\}$
-                \If {$H$ is spanning tree}
-                    \State \Return $H$
-                \EndIf
-            \EndIf
-        \EndFor
-        \caption{Generalised-Kruskal Algorithm (Adaptado de [17])}
-        \label{alg:generalised_kruskal}
-        \end{algorithmic}
-    \end{minipage}
-\end{figure}
-
-Este framework permite a criação de operadores de
-mutação sofisticados, como Deletion-First (DF) e Insertion-First
-(IF). No DF, arestas são removidas de uma MST parental para
-formar uma floresta, que é então religada usando o GK com
-arestas ordenadas por uma função de custo escalarizada. No IF,
-arestas são adicionadas a uma MST parental, introduzindo ciclos,
-e o GK é então usado para extrair uma nova MST a partir do
-grafo resultante. Essas técnicas demonstram como os princípios
-do algoritmo de Kruskal e a verificação de ciclos via conjuntos
-disjuntos podem ser aproveitados em heurísticas avançadas para
-problemas de otimização complexos \cite{bossek2024generalised}. % [17]
-
-\subsection{Planejamento de Redes e Clustering}
-
-As aplicações mais diretas e difundidas do algoritmo de
-Kruskal e dos conjuntos disjuntos permanecem no planejamento
-de redes. Seja para projetar redes de transporte rodoviário,
-instalar cabos de fibra óptica ou construir dutos para água e gás, o
-objetivo é quase sempre conectar um conjunto de pontos com o
-menor custo total, o que é precisamente o problema da MST \cite{bossek2024generalised}. % [17]
-A escolha entre Kruskal e outros algoritmos, como o de Prim,
-muitas vezes depende da densidade do grafo. Kruskal tende a ser
-superior para grafos esparsos, que são comuns em muitas
-aplicações do mundo real, como redes rodoviárias em terrenos
-acidentados \cite{patwary2010experiments}. % [6]
-
-Adicionalmente, o algoritmo é fundamental em análise
-de dados, particularmente em métodos de clustering. Ele forma a
-base para o clustering de ligação única (single-linkage clustering)
-e é um passo essencial em algoritmos de clustering baseados em
-densidade mais avançados, como o HDBSCAN*, que constrói
-uma hierarquia de clusters a partir da MST de um "grafo de
-alcançabilidade mútua" \cite{wang2021fast}. % [16]
-
-\section{Conclusão}
-
-Os Conjuntos Disjuntos, implementados pela estrutura Union-Find (DSU), são fundamentais na Ciência da Computação por fornecerem uma solução eficiente para o problema de particionamento de conjuntos. A eficiência do DSU é alcançada principalmente através de técnicas de otimização como \textbf{Path Compression}, que achata a estrutura da árvore, e \textbf{Union by Size/Rank}, que controla o crescimento da altura da árvore. A combinação dessas técnicas resulta em uma complexidade amortizada de $O(\alpha(n))$, essencialmente constante, o que é crucial para lidar com o grande fluxo de dados em aplicações modernas, como o processamento paralelo em grafos de larga escala \cite{chen2025hierarchical} % [3]
-e a análise de componentes conectados em visão computacional \cite{fiorio1996linear}. % [19]
+
+> **Função Find (Ingênua)**
+> \pseudocodofindnaive
+
+É importante notar que essa evolução segue regras estritas de monotonicidade. É destacada uma invariante essencial para a correção de algoritmos, especialmente em contextos paralelos: a partição evolui através da fusão; um conjunto nunca é dividido. Assim, em qualquer instante, a estrutura deve refletir uma partição válida, impondo restrições significativas sobre o acesso e modificação de memória concorrente \cite{jayanti2021concurrent}.
+
+---
+
+\section{OPERAÇÕES FUNDAMENTAIS}
+
+Há três operações fundamentais no DSU: a criação de um conjunto com apenas um elemento, a união dos conjuntos e a busca por um elemento pertencente aos conjuntos.
+
+\subsection{A. Makeset}
+
+É a criação de um conjunto com apenas um elemento, o **singleton**, a inicialização do conjunto. Cada elemento começa como um conjunto separado de um único nó que também é a sua raiz \cite{goel2019disjoint}, pois pode garantir a formação correta e manipulação dos conjuntos disjuntos.
+
+\subsection{B. Union}
+
+A **União dos Conjuntos** recebe os elementos dos conjuntos e os une em um único conjunto. Por ser uma estrutura de dados e ser representada na forma de árvores, vai haver uma reorganização para uma única árvore que representará a união dos conjuntos.
+
+A União da DSU possui variações a fim de otimizar essa operação, o ligamento por rank e por tamanho, essa técnica reduz as alturas das árvores tornando as operações seguintes mais eficientes:
+
+*   **Union by rank:** Cada conjunto tem um valor "rank", que geralmente se refere à altura da árvore, e aquele de menor rank é unido ao de maior. Caso o rank seja igual, um se torna filho do outro, e o novo rank é incrementado.
+*   **Union by size:** Ao invés de usar o rank, usa-se o tamanho (número de nós). A árvore menor é unida à maior.
+
+Para cada um desses métodos, será necessário o armazenamento de alguns dados como as alturas das árvores e dos nós delas \cite{chen2025hierarchical}.
+
+\subsection{C. Find}
+
+A operação \texttt{Find(x)} irá procurar a qual árvore o elemento pertence, sendo fundamental para identificar a qual conjunto ele pertence e assim realizar as demais operações de forma mais eficiente.
+
+Essa operação irá seguir o ponteiro do nó pai até encontrar um que aponta para si mesmo, o qual é o representante do conjunto.
+
+> **Função Find (Ingênua) - Código Simples**
+> \pseudocodofindnaiveinlined
+
+Na definição do Find, o processo que segue o ponteiro do nó pai até a raiz configura-se como a **busca ingênua**. Essa operação essencial tem complexidade $O(n)$, o que não é o ideal. Por isso, a operação Find possui formas de otimização \cite{chen2025hierarchical}:
+
+*   **Path Compression:** cada nó pai aponta diretamente para a raiz da árvore.
+
+> **Função Find (Otimizada com Path Compression)**
+> \pseudocodofindoptimized
+
+---
+
+\section{OTIMIZAÇÃO DO DSU: COMPRESSÃO DE CAMINHO}
+
+A **compressão de caminho** é a principal otimização utilizada no DSU para acelerar operações repetidas. A técnica consiste em "conectar nós diretamente ao seu nó raiz, reduzindo a altura da árvore ao mínimo" \cite{shen2023study}. A combinação desta otimização com Union by Rank/Size resulta em uma complexidade amortizada $O(\alpha(n))$ (função inversa de Ackermann), que é "efetivamente constante" \cite{griffiths2024union}.
+
+Para evitar que as árvores cresçam demais, é realizado o uso de otimizações na união e busca:
+
+\subsection{A. Union by size}
+
+**Union by size (UBS)** sempre anexa a menor árvore à maior. Essa técnica "limita a altura das árvores a $O(\log n)$" e reduz o custo do find \cite{griffiths2024union}.
+
+Ao unir dois conjuntos, a raiz da árvore menor é sempre ligada à raiz da árvore maior. Isso garante que a altura da árvore resultante cresça o mais lentamente possível. Um elemento só aumenta a sua profundidade se a sua árvore for ligada a uma maior, o que acontece no máximo $O(\log n)$ vezes.
+
+\subsection{B. Path Compression}
+
+**Path compression** comprime o caminho de busca tornando cada nó visitado filho direto da raiz.
+
+\subsection{C. Path Splitting}
+
+Patwary, Blair e Manne \cite{patwary2010experiments} discutem variantes que evitam uma segunda passagem pelos nós, sendo potencialmente mais eficientes. No **Path Splitting**, cada nó no caminho de busca é atualizado para apontar para o seu avô (o pai do seu pai). Isso encurta o caminho gradualmente sem a necessidade de conhecer a raiz antecipadamente.
+
+\subsection{D. Path Halving}
+
+Outra variação citada por Patwary, Blair e Manne \cite{patwary2010experiments} é a **Path Halving**. A atualização do ponteiro para o avô é feita em nós alternados (um nó sim, um nó não) ao longo do caminho, reduzindo pela metade a quantidade de gravações na memória, o que pode ser vantajoso em arquiteturas com barramentos de memória saturados.
+
+\subsection{E. Union by rank}
+
+**Union by Rank** é uma variação onde, em vez do tamanho exato, armazena-se um limite superior para a altura da árvore, chamado de "**posto**" (rank).
+
+Se duas árvores de postos diferentes são unidas, a de menor posto é ligada à de maior posto, e o posto resultante não muda. Se duas árvores do mesmo posto são unidas, uma é ligada à outra e o posto da nova raiz é incrementado em 1. Sua vantagem é que ocupa menos memória que o tamanho (o posto nunca excede $\log N$).
+
+---
+
+\section{ANÁLISE BIBLIOMÉTRICA}
+
+A revisão bibliométrica realizada na base de dados Web of Science (filtros: "disjoint set" e "computer science") revelou o seguinte panorama:
+
+\subsection{A. Distribuição por Áreas de Pesquisa}
+
+A pesquisa é fortemente concentrada em campos que unem a matemática à computação.
+
+*   **Mathematics Applied:** 25 publicações.
+*   **Computer Science Theory Methods:** 19 artigos.
+*   **Mathematics:** 14 publicações.
+
+Também há distribuição em Computer Science Software Engineering (11), Computer Science Artificial Intelligence (9), e Computer Science Information Systems (9).
+
+\subsection{B. Tipologia dos Documentos Publicados}
+
+Há uma prevalência clara de **Articles** (aproximadamente 57 publicações) em periódicos científicos, seguidos por **Proceedings Papers** (cerca de 18 publicações) em anais de conferências.
+
+\subsection{C. Evolução Temporal da Produção Científica}
+
+A análise temporal (2015-2025) mostra um interesse crescente. Um pico notável ocorreu nos anos de **2020 e 2021**, que juntos somam 13 publicações, possivelmente relacionado à demanda por algoritmos eficientes e ao aumento geral da produção científica. A relevância do tópico é contínua, com recuperação em 2023, 2024 e 2025.
+
+\subsection{D. Ausência de Publicações em Português}
+
+As buscas nas bases Scopus e Web of Science utilizando o termo em português "**conjuntos disjuntos**" **não retornaram resultados**. Isso reflete a natureza predominantemente anglófona da publicação científica na área, mas também sugere uma oportunidade para a produção de material educacional e científico em português sobre o tema.
+
+---
+
+\section{PROCESSAMENTO DE IMAGENS}
+
+A estrutura Union-Find é ideal para o problema de **extrair as características principais de uma imagem** na área de visão computacional, pois gerencia coleções disjuntas de pixels que são agrupados (\textit{mesclados}) ao longo do tempo (crescimento de regiões).
+
+Fiorio e Gusted \cite{fiorio1996linear} sugeriram dois algoritmos que garantem a linearidade das operações:
+
+\begin{enumerate}
+    \item **ScanLine:** Processa a imagem linha a linha, inspecionando cada pixel para determinar se ele pode ser integrado às regiões formadas pelos pixels adjacentes (esquerda e acima). O processo de União prioriza ligar a região mais recentemente encontrada àquela identificada primeiro, assumindo uma complexidade $O(1)$.
+\item **MergeSquares:** Assume que a imagem é um quadrado de $2^k \times 2^k$ e procede recursivamente, dividindo-o em 4 sub-quadrados. Após a recursão, as regiões nos 4 sub-quadrados são fundidas ao longo da fronteira comum.
+\end{enumerate}
+
+> **Pseudocódigo do algoritmo ScanLine**
+> \pseudocodoScanLine
+
+> **Pseudocódigo do algoritmo MergeSquares**
+> \pseudocodoMergeSquares
+
+Allegretti, Bolelli e Grana \cite{allegretti2020optimized} sugeriram o "**Block-based Union Find kernels (BUF)**" para mitigar o problema de **acesso excessivo à memória** em GPUs. O BUF aplica o processamento a **blocos $2\times2$** em vez de pixels individuais e é implementado através de quatro \textit{kernels}:
+
+1.  **INITIALIZATION:** Cada bloco começa como uma árvore separada (singleton).
+2.  **MERGE:** Realiza a união entre blocos adjacentes conectados, utilizando operações atômicas para concorrência.
+3.  **COMPRESSION:** Aplica a função \texttt{Compress} para achatar a árvore union-find, garantindo que todos os blocos do mesmo componente compartilhem o mesmo rótulo.
+4.  **FINAL LABELING:** Copia os rótulos dos blocos para os pixels individuais de primeiro plano.
+
+---
+
+\section{ALGORITMO DE KRUSKAL}
+
+Na Teoria dos Grafos, o Union-Find é crucial para o **Algoritmo de Kruskal**, usado para construir a **Árvore Geradora Mínima (MST)**, principalmente para **detectar ciclos em tempo quase constante**.
+
+A operação do algoritmo de Kruskal envolve:
+1. Ordenar todas as arestas do grafo por peso.
+2. Iterar sobre as arestas, adicionando uma aresta à MST se, e somente se, seus vértices de extremidade pertencerem a componentes conectadas diferentes (verificado por \texttt{FIND-SET} e unido por \texttt{UNION}).
+
+> **Pseudocódigo do Algoritmo de Kruskal**
+> \pseudocodoKruskal
+
+A complexidade geral do algoritmo é dominada pela ordenação das arestas, sendo tipicamente $O(|E| \log |E|)$ ou $O(|E| \alpha(|V|))$ \cite{chargueraud2019verifying}.
+
+### Aplicações do Kruskal
+*   **Computação Neuromórfica e Paralela:** Versões em pipeline, como o \texttt{NeuroSeqKruskal} \cite{chong2024pipelining}, adaptam-se a arquiteturas paralelas. Também é usado na construção de EMSTs e clustering hierárquico (HDBSCAN*).
+*   **Geração Procedural de Labirintos:** Gera um labirinto "perfeito" (topologicamente equivalente a uma árvore geradora) ao adicionar arestas que não formam ciclos.
+*   **Otimização Evolutiva (Generalised-Kruskal):** O framework \texttt{Generalised-Kruskal (GK)} \cite{bossek2024generalised} abstrai o mecanismo de construção de árvores para criar operadores de mutação para o problema da MST multi-objetivo (moMST).
+*   **Planejamento de Redes e Clustering:** Aplicações diretas em projeto de redes de transporte e formação da base para o clustering de ligação única.
+
+---
+
+\section{CONCLUSÃO}
+
+A estrutura de dados Conjuntos Disjuntos (DSU) é uma ferramenta algorítmica de relevância inegável na Ciência da Computação. Sua eficiência, viabilizada pela **Union by Rank/Size** e **Path Compression**, confere uma complexidade amortizada de $O(\alpha(n))$ (praticamente constante).
+
+O DSU é indispensável tanto para algoritmos clássicos (como a detecção de ciclos no Algoritmo de Kruskal) quanto para soluções modernas de alto desempenho (como o algoritmo BUF para otimizar o acesso à memória em GPUs).
+
+A análise bibliométrica revela a necessidade de pesquisa contínua em otimizações para novas arquiteturas de hardware (e.g., Path Splitting e Halving) e aponta a **oportunidade para a comunidade brasileira** de produzir conteúdo acadêmico e educacional em português sobre o tema, dada a lacuna identificada nas principais bases de dados internacionais.
 
 \bibliographystyle{IEEEtran}
 \bibliography{myrefs}
